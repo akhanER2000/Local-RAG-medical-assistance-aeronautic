@@ -1,0 +1,15 @@
+# Entornos virtuales
+env/
+venv/
+.env
+
+# Archivos de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+
+# Ignorar temporalmente los datasets si son muy pesados (opcional)
+# dataset_sintetico/*.jsonl
