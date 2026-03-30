@@ -1,6 +1,6 @@
 # ✈️ Sistema Integral de Evaluación Médica Aeronáutica (Dual-Engine)
 
-Este proyecto nace de la necesidad de aplicar la metodología científica de análisis de datos **CRISP-DM** para evaluar la aptitud médica de pilotos (con un foco analítico especial en patologías como la Diabetes Tipo 1). Para lograr una cobertura completa de los requerimientos clínicos y reglamentarios, el sistema opera bajo una innovadora arquitectura **Dual-Engine** que combina el rigor de las regulaciones de la DGAC/OACI (mediante técnicas de Procesamiento de Lenguaje Natural) con el modelamiento matemático predictivo sobre datos clínicos estructurados reales.
+Este proyecto nace de la necesidad de aplicar la metodología científica de análisis de datos **CRISP-DM** para evaluar la aptitud médica de pilotos (con un foco analítico especial en patologías y factores humanos asociados al estrés crónico, fatiga aeromédica y salud mental). Para lograr una cobertura completa de los requerimientos clínicos y reglamentarios, el sistema opera bajo una innovadora arquitectura **Dual-Engine** que combina el rigor de las regulaciones de la DGAC/OACI (mediante técnicas de Procesamiento de Lenguaje Natural) con el modelamiento matemático predictivo sobre datos clínicos estructurados reales.
 
 ---
 
@@ -23,7 +23,7 @@ Diseñado para la asimilación legal y búsqueda semántica de reglamentos:
 
 ### 2. Módulo Predictivo de Riesgo Clínico (Motor Estructurado)
 Cimentado sobre las bases del Machine Learning clásico para prevenir fallos humanos:
-- **Corpus Analítico:** Exploración de la macra-base de datos del Sistema de Vigilancia de Factores de Riesgo del CDC de EE. UU. (*BRFSS*) enfocado en cuadros diabéticos.
+- **Corpus Analítico:** Exploración de la macro-base de datos médica del Canadian Community Health Survey (CCHS) enfocada en factores críticos para el vuelo (Dataset: [Healthcare Survey en Kaggle](https://www.kaggle.com/datasets/aradhanahirapara/healthcare-survey/data)).
 - **Robustez Algorítmica:** Inyección simulada de defectos de sensores hospitalarios en biomarcadores continuos, neutralizada a través de imputaciones multivariadas con **K-Nearest Neighbors (K-NN)** y una estabilización total de pesos escalares aplicando un **StandardScaler**.
 
 ---
@@ -66,7 +66,7 @@ Sigue estos rigurosos pasos para auditar el funcionamiento matemático del proye
    ```
 
 3. **Inicia tu IDE y el Cuaderno Predictivo:**
-   Abre el archivo maestro `notebooks/EDA_Integral_DualEngine.ipynb` mediante VS Code u otro navegador para distribuciones Jupyter.
+   Abre el archivo maestro `notebooks/EDA_Avanzado_DualEngine_CCHS.ipynb` mediante VS Code u otro navegador para distribuciones Jupyter.
 
 4. **Desencadena el CRISP-DM Pipeline:**
    Asegúrate de escoger el kernel de Python correspondiente a tu entorno pre-configurado y presiona **Run All**. Observarás en vivo la renderización dimensional de PCA, las matrices de calor clínicas y a *Mistral* emitiendo sus diagnósticos médicos concluyentes.
