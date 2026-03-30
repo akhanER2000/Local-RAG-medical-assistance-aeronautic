@@ -1,64 +1,72 @@
-# 🚁 Sistema RAG Local - Asistencia Médica Aeronáutica (DGAC Chile)
+# ✈️ Sistema Integral de Evaluación Médica Aeronáutica (Dual-Engine)
 
-Bienvenido a la infraestructura base del sistema **RAG (Retrieval-Augmented Generation) Local**. Este es un proyecto de Ciencia de Datos y Procesamiento de Lenguaje Natural enfocado en crear un asistente virtual experto en la normativa médica y operacional de la Dirección General de Aeronáutica Civil (DGAC) y la OACI.
-
-Todo el ecosistema de inteligencia artificial está configurado para operar de manera **100% local**, maximizando la privacidad de los datos mediante el uso avanzado de una tarjeta gráfica de alta gama (Serie RTX50) y prescindiendo de dependencias de nubes y cobros externos.
+Este proyecto nace de la necesidad de aplicar la metodología científica de análisis de datos **CRISP-DM** para evaluar la aptitud médica de pilotos (con un foco analítico especial en patologías como la Diabetes Tipo 1). Para lograr una cobertura completa de los requerimientos clínicos y reglamentarios, el sistema opera bajo una innovadora arquitectura **Dual-Engine** que combina el rigor de las regulaciones de la DGAC/OACI (mediante técnicas de Procesamiento de Lenguaje Natural) con el modelamiento matemático predictivo sobre datos clínicos estructurados reales.
 
 ---
 
-## 📑 Arquitectura Actual del Proyecto
+## 📄 Informe de Avance y Formulación del Proyecto
 
-El proyecto está diseñado metodológicamente inspirado en **CRISP-DM**, cubriendo hasta el momento las siguientes fases:
+Toda la justificación teórica, los objetivos del negocio, el entendimiento clínico y las definiciones de alcance que enmarcan este repositorio se encuentran formalizados académicamente en la documentación oficial. Por favor consulte el documento directamente en el siguiente enlace:
 
-### 1. Generación de Dataset Sintético (`scripts/generar_dataset.py`)
-Utilizando los manuales base (tales como las normativas `DAN 121`, `DAN 135`, `DAN 67`, `MAPE-MEDAV`, entre otros), este script:
-- Se encarga de fragmentar limpiamente cada PDF protegiendo la cohesión de los párrafos usando `RecursiveCharacterTextSplitter` de LangChain.
-- Invoca al modelo en local de Meta, **Llama 3** (a través de Ollama), para leer, analizar exhaustivamente cada fragmento y extraer sistemáticamente **hasta 3 pares de Pregunta/Respuesta** técnica.
-- Como resultado: Se creó de manera autónoma un mega-dataset de más de **14.500 Q&A** empacado en `mega_dataset_aeronautico.jsonl`. Un activo invaluable para afinar cualquier sistema de IA en salud aeronáutica.
-
-### 2. Análisis Exploratorio de Datos / EDA (`notebooks/EDA_Aeronautico.ipynb`)
-Para garantizar que la metadata y contenido sintetizado se adhieren a la calidad exigida por el proyecto, el Notebook:
-- Purga valores vacíos y justifica estadísticamente la distribución de caracteres (Context vs Respuesta).
-- Muestra una Nube de Palabras generada tras aplicar filtros NLP (Stopwords).
-- Ejecuta técnicas científicas para validar una representación de las normativas de "Vuelo" (DAN) vs "Médicas": usando la descomposición de varianza de **PCA** (Modelo de Aprendizaje Automático Clásico) y luego el mapeo topológico avanzado en gráficos mediante el algoritmo **UMAP**. Ambas técnicas alimentadas matemáticamente por los *embeddings* locales de `nomic-embed-text`.
+🔗 **[Documentación de Investigación y Respaldo Teórico del Proyecto](https://docs.google.com/document/d/1MERbrd4tcaVxPxwzoyYjgJ-4ecfWIIenZio1oF4cc24/edit?usp=sharing)**
 
 ---
 
-## 🛠 Instalación y Configuración
+## 🏗️ Arquitectura del Sistema (Dual-Engine)
 
-Toda la infraestructura está desplegada dentro de un entorno virtual para asegurar versiones compatibles de librerías.
+El ecosistema computacional se nutre del esfuerzo cooperativo de dos motores integrados para garantizar diagnósticos y respuestas sin alucinaciones.
 
-### Prerrequisitos
-1. Instalador de Python 3.10+
-2. **Ollama**: Pre-instalado e iniciado (Para levantar Llama 3 y nomic-embed-text).
+### 1. Módulo de Consulta Normativa (Motor RAG - NLP)
+Diseñado para la asimilación legal y búsqueda semántica de reglamentos:
+- **Procesamiento Masivo:** Fragmentación matemática de **14.501** pares de preguntas/respuestas generados sintéticamente a partir de las resoluciones DGAC (DAN 19, DAN 61, DAN 67, DAN 121, DAN 135) y el Manual Médico OACI 8984.
+- **Topología e Ingestión Vectorial:** Emplea los embeddings cuánticos (`nomic-embed-text`) proyectados en mapas 2D mediante técnicas de reducción dimensional clásicas y avanzadas (**PCA** y **UMAP**) para validar que las "islas de conocimiento" médico estén aisladas matemáticamente de las normas operacionales de vuelo.
 
-### Comandos de Activación
-```bash
-# Entrar al entorno protegido
-.\env\Scripts\activate
-
-# Modelos locales de Inferencia requeridos
-ollama pull llama3
-ollama pull nomic-embed-text
-```
+### 2. Módulo Predictivo de Riesgo Clínico (Motor Estructurado)
+Cimentado sobre las bases del Machine Learning clásico para prevenir fallos humanos:
+- **Corpus Analítico:** Exploración de la macra-base de datos del Sistema de Vigilancia de Factores de Riesgo del CDC de EE. UU. (*BRFSS*) enfocado en cuadros diabéticos.
+- **Robustez Algorítmica:** Inyección simulada de defectos de sensores hospitalarios en biomarcadores continuos, neutralizada a través de imputaciones multivariadas con **K-Nearest Neighbors (K-NN)** y una estabilización total de pesos escalares aplicando un **StandardScaler**.
 
 ---
 
-## 🚀 Uso
+## 🔬 Fases CRISP-DM Implementadas (Entregables Actuales)
 
-### Re-Generar el Mega Dataset
-Si añades más documentos PDF en la carpeta `datos_crudos/`, puedes volver a generar el dataset haciendo uso directo de Python:
-```bash
-python scripts/generar_dataset.py
-```
-*(Nota: Toma alrededor de 25-30 minutos procesar todo un compendio de reglamentos base con una RTX 5070 Ti)*
+Actualmente, el cuaderno analítico maestro cubre con éxito las etapas fundamentales de pre-entrenamiento de los datos:
 
-### Iniciar el Análisis Exploratorio
-Carga las celdas directamente dentro de tu Notebook para ver las demostraciones de PCA y agrupamiento de Inteligencia Artificial No Supervisada:
-1. Abre tu IDE / VS Code y selecciona el Entorno Virtual: `env (RAG Aeronautico)`.
-2. O bien, inicia Jupyter desde terminal: `jupyter notebook notebooks/EDA_Aeronautico.ipynb`
+- **Data Understanding (Comprensión de los Datos):** Se extraen histogramas distribucionales precisos de textos y Nubes de Palabras filtradas. Adicionalmente, cuenta con el desarrollo pionero de una Matriz de Correlación de Pearson cuyos resultados estadísticos de los Factores de Riesgo son interpretados en tiempo real por Inteligencia Artificial generativa local.
+- **Data Quality Report (Reporte de Integridad):** Reporte automatizado en código que incluye la detección forense de valores nulos (NaN), simulación de rotura de flujos de datos en mediciones como el *Body Mass Index* (BMI) para medir la resiliencia algorítmica.
+- **Data Preparation (Preparación de Datos):** Transformación técnica orientada a modelos de Machine Learning (como Máquinas de Soporte Vectorial - SVM). Implica el llenado deductivo (imputación algorítmica multidimensional) y una escalabilidad (normalización) que ajusta la varianza a 1, eliminando ruidos métricos del *dataset tabular*.
 
 ---
 
-## 🔮 Futuras Implementaciones
-En las siguientes fases del proyecto, se construirá la Base de Datos Vectorial (ChromaDB o similar) donde ingeriremos todos los fragmentos y estableceremos el *pipeline* del "Buscador Inteligente", en el que el usuario podrá consultar regulaciones en vivo conversando con Llama 3 usando esta base como respaldo legal estricto.
+## ⚙️ Requisitos Técnicos y Reproducibilidad
+
+El sistema debe ejecutarse en el entorno para el cual fue nativamente conceptualizado.
+- **Lenguaje Base:** Python 3.10+
+- **Entorno de Operación:** Entornos Virtuales (`env`) sobre *Jupyter Notebook*.
+- **Dependencias Clave:** `pandas`, `scikit-learn`, `seaborn`, `umap-learn`, `wordcloud`.
+- **Hardware e IA Local Extricta:** Para dotar al sistema Dual-Engine y mantener privacidad PIV total sobre cuadros médicos, **el pipeline exige la instalación del servidor local `Ollama` ejecutándose en segundo plano**. Emplea concretamente los pesos de **`mistral`** (para inferencia lógica experta) y **`nomic-embed-text`** (para matematización vectorial), requiriendo de aceleración intensiva por GPU de la familia Turing/Ada/Lovelace/Blackwell.
+
+---
+
+## 🚥 Instrucciones de Ejecución Rápida
+
+Sigue estos rigurosos pasos para auditar el funcionamiento matemático del proyecto:
+
+1. **Clona el ecosistema a tu estación de trabajo:**
+   ```bash
+   git clone https://github.com/akhanER2000/Local-RAG-medical-assistance-aeronautic.git
+   cd Local-RAG-medical-assistance-aeronautic
+   ```
+
+2. **Carga y arranca el Motor Ollama:**
+   Inicia la aplicación de Ollama en tu ordenador. Asegúrate de tener los modelos base sincronizados ejecutando en consola:
+   ```bash
+   ollama pull mistral
+   ollama pull nomic-embed-text
+   ```
+
+3. **Inicia tu IDE y el Cuaderno Predictivo:**
+   Abre el archivo maestro `notebooks/EDA_Integral_DualEngine.ipynb` mediante VS Code u otro navegador para distribuciones Jupyter.
+
+4. **Desencadena el CRISP-DM Pipeline:**
+   Asegúrate de escoger el kernel de Python correspondiente a tu entorno pre-configurado y presiona **Run All**. Observarás en vivo la renderización dimensional de PCA, las matrices de calor clínicas y a *Mistral* emitiendo sus diagnósticos médicos concluyentes.
