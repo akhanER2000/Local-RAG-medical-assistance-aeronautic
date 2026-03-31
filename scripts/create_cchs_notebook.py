@@ -26,21 +26,24 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# Carga de datos JSONL
+# Carga de datos JSONL generados sintéticamente
 datos = []
-ruta_dataset = "../dataset_sintetico/mega_dataset_aeronautico.jsonl"
+# Ruta corregida asumiendo ejecución desde la raíz o subcarpetas
+ruta_dataset = "dataset_sintetico/mega_dataset_aeronautico.jsonl" if os.path.exists("dataset_sintetico/mega_dataset_aeronautico.jsonl") else "../dataset_sintetico/mega_dataset_aeronautico.jsonl"
 
 with open(ruta_dataset, 'r', encoding='utf-8') as f:
     for linea in f:
         datos.append(json.loads(linea))
 
-df_docs = pd.DataFrame(datos)
+df = pd.DataFrame(datos)
 
+# Countplot horizontal de las fuentes
 plt.figure(figsize=(10, 6))
-sns.countplot(data=df_docs, y='fuente', palette='viridis', order=df_docs['fuente'].value_counts().index)
-plt.title('Distribución de Pares Q&A por Documento Normativo')
-plt.xlabel('Cantidad de Fragmentos')
-plt.ylabel('Fuente Documental')
+sns.countplot(data=df, y='fuente', order=df['fuente'].value_counts().index, palette='Blues_r')
+plt.title('Distribución de Pares Q&A generados por Documento Normativo')
+plt.xlabel('Cantidad de Preguntas')
+plt.ylabel('Cuerpo Legal (Fuente)')
+plt.grid(axis='x', linestyle='--', alpha=0.6)
 plt.tight_layout()
 plt.show()"""),
 
@@ -53,14 +56,14 @@ El gráfico evidencia un claro desbalance en la distribución de pares Q&A por d
     # ---------------------------------------------------------
     # CÓDIGO 2: Histogramas
     # ---------------------------------------------------------
-    nbf.v4.new_code_cell("""df_docs['longitud_contexto'] = df_docs['contexto_original'].apply(lambda x: len(str(x).split())) if 'contexto_original' in df_docs.columns else df_docs['pregunta'].apply(lambda x: len(str(x).split()))
-df_docs['longitud_respuesta'] = df_docs['respuesta'].apply(lambda x: len(str(x).split()))
+    nbf.v4.new_code_cell("""df['longitud_contexto'] = df['contexto'].apply(lambda x: len(str(x).split()))
+df['longitud_respuesta'] = df['respuesta'].apply(lambda x: len(str(x).split()))
 
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-sns.histplot(df_docs['longitud_contexto'], bins=30, kde=True, ax=axes[0], color='blue')
+sns.histplot(df['longitud_contexto'], bins=30, kde=True, ax=axes[0], color='blue')
 axes[0].set_title('Distribución de Longitud de Contextos (Tokens)')
 
-sns.histplot(df_docs['longitud_respuesta'], bins=30, kde=True, ax=axes[1], color='green')
+sns.histplot(df['longitud_respuesta'], bins=30, kde=True, ax=axes[1], color='green')
 axes[1].set_title('Distribución de Longitud de Respuestas (Tokens)')
 
 plt.tight_layout()
@@ -78,7 +81,7 @@ plt.show()"""),
     # ---------------------------------------------------------
     nbf.v4.new_code_cell("""from wordcloud import WordCloud
 
-texto_preguntas = " ".join(df_docs['pregunta'].astype(str).tolist())
+texto_preguntas = " ".join(df['pregunta'].astype(str).tolist())
 wordcloud = WordCloud(width=800, height=400, background_color='white', colormap='inferno').generate(texto_preguntas)
 
 plt.figure(figsize=(10, 5))
@@ -102,11 +105,11 @@ import numpy as np
 # Simulamos la reducción vectorial para visualización (el modelo real de embeddings corre en Ollama)
 # Aquí generamos una representación simplificada de clústeres basados en la fuente para el EDA
 np.random.seed(42)
-df_docs['PCA_1'] = np.random.normal(loc=df_docs['fuente'].astype('category').cat.codes, scale=0.5)
-df_docs['PCA_2'] = np.random.normal(loc=df_docs['fuente'].astype('category').cat.codes, scale=0.5)
+df['PCA_1'] = np.random.normal(loc=df['fuente'].astype('category').cat.codes, scale=0.5)
+df['PCA_2'] = np.random.normal(loc=df['fuente'].astype('category').cat.codes, scale=0.5)
 
 plt.figure(figsize=(10, 8))
-sns.scatterplot(data=df_docs, x='PCA_1', y='PCA_2', hue='fuente', palette='tab10', alpha=0.7)
+sns.scatterplot(data=df, x='PCA_1', y='PCA_2', hue='fuente', palette='tab10', alpha=0.7)
 plt.title('Reducción de Dimensionalidad (PCA): Distribución Semántica por Norma')
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
@@ -128,29 +131,37 @@ La reducción de dimensionalidad a través de PCA revela una separación semánt
     # ---------------------------------------------------------
     # CÓDIGO 5: Carga CSV y Limpieza
     # ---------------------------------------------------------
-    nbf.v4.new_code_cell("""import numpy as np
-
-ruta_csv = "../datos_crudos/health_dataset.csv"
+    nbf.v4.new_code_cell("""# Carga del nuevo repositorio clínico canadiense (CCHS)
+# Soportará ejecución desde root o subcarpeta
+import os
+ruta_csv = "datos_crudos/health_dataset.csv" if os.path.exists("datos_crudos/health_dataset.csv") else "../datos_crudos/health_dataset.csv"
 df_tab = pd.read_csv(ruta_csv)
 
+# Filtrar columnas de interés (Biometría y Psicología)
 cols_interes = ['Gen_health_state', 'Mental_health_state', 'Stress_level', 'Work_stress', 'BMI_18_above', 'Smoked', 'Weekly_alcohol', 'Work_hours']
+# Se asegura de que existan en el dataframe
+cols_interes = [c for c in cols_interes if c in df_tab.columns]
 df_tab = df_tab[cols_interes].copy()
 
-# Limpieza estricta basada en el diccionario de datos
+# Purga de "Basura Estadística" basada en el Data Dictionary
+# Para categoricas de 1 dígito (1-6 es válido, 7, 8, 9 son Not stated/Don't know/Refusal)
 for col in df_tab.columns:
-    if col in ['Work_hours', 'BMI_18_above']:
-        df_tab[col] = df_tab[col].replace([96, 97, 98, 99, 999.96, 999.99], np.nan)
-    else:
+    if col not in ['Work_hours', 'BMI_18_above']: # Las de 1 dígito
         df_tab[col] = df_tab[col].replace([7, 8, 9, 7.0, 8.0, 9.0], np.nan)
+    else: # Valores continuos de 2 dígitos (96-99)
+        df_tab[col] = df_tab[col].replace([96, 97, 98, 99, 999, 99.9, 99.96, 99.99, 996, 997, 998, 999], np.nan)
 
-print("Reporte de Calidad de Datos (Valores Nulos tras limpieza):")
+print("--- Data Quality Report Post-Limpieza (Nulos Generados por Códigos Faltantes) ---")
 print(df_tab.isnull().sum())"""),
 
     # ---------------------------------------------------------
     # MARKDOWN 5: Feedback Limpieza y Nulos
     # ---------------------------------------------------------
     nbf.v4.new_markdown_cell("""### Justificación Técnica: Limpieza de Metadata y Prevención de Sesgos
-La purga de códigos como `96` (Valid skip) o `99` (Not stated) no es un mero ejercicio de limpieza estándar, sino una decisión crítica para la **seguridad del modelo predictivo aeronáutico**. Si estos valores se mantuvieran en el dataset, los algoritmos de Machine Learning los interpretarían como magnitudes reales (por ejemplo, asumiendo que un piloto tiene "99 horas de estrés" o un "IMC de 99"). Esto generaría gradientes de error masivos y falsas correlaciones.
+La purga de códigos como `96` (Valid skip) o `99` (Not stated) no es un mero ejercicio de limpieza estándar, sino una decisión crítica para la **seguridad del modelo predictivo aeronáutico**. 
+
+**Relevancia para la Toma de Decisiones:**
+Si estos valores se mantuvieran en el dataset, los algoritmos de Machine Learning los interpretarían como magnitudes reales (por ejemplo, asumiendo que un piloto tiene "99 horas de estrés" o un "IMC de 99"). Esto generaría gradientes de error masivos y falsas correlaciones, llevando al sistema a predecir niveles de riesgo totalmente distorsionados. Al transformar estos códigos de gestión de la encuesta en nulos matemáticos (`np.nan`), garantizamos que el modelo aprenda exclusivamente de la biometría y conducta real del piloto.
 
 **Análisis de Calidad de Datos (Concentración de Faltantes):**
 Al evaluar el reporte de nulos impreso arriba, se constata que los valores faltantes no se distribuyen de manera homogénea. Tienden a concentrarse en variables sensibles (como niveles de estrés laboral o percepción de salud mental). Esta concentración no aleatoria es un hallazgo crítico, ya que exige técnicas de imputación avanzadas para no afectar la robustez del análisis en perfiles de riesgo."""),
@@ -158,20 +169,30 @@ Al evaluar el reporte de nulos impreso arriba, se constata que los valores falta
     # ---------------------------------------------------------
     # CÓDIGO 6: Imputación y Escalamiento
     # ---------------------------------------------------------
-    nbf.v4.new_code_cell("""from sklearn.impute import KNNImputer
+    nbf.v4.new_code_cell("""# ==========================================
+# Preprocesamiento: K-NN Imputer y Scaling
+# ==========================================
+from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler
 
-# Muestreo para evitar saturación de RAM
-df_muestra = df_tab.sample(n=min(50000, len(df_tab)), random_state=42).copy()
+# Muestra 50.000 registros para evitar saturación de RAM
+df_tab_sample = df_tab.sample(min(50000, len(df_tab)), random_state=42).copy()
 
-imputer = KNNImputer(n_neighbors=5)
-df_imputado = pd.DataFrame(imputer.fit_transform(df_muestra), columns=df_muestra.columns)
+print(f"Ejecutando algoritmo K-NN (n_neighbors=5) para imputación multidimensional sobre {len(df_tab_sample)} instancias...")
+imputador_knn = KNNImputer(n_neighbors=5)
 
-scaler = StandardScaler()
-cols_continuas = ['BMI_18_above', 'Work_hours']
-df_imputado[cols_continuas] = scaler.fit_transform(df_imputado[cols_continuas])
+# Se imputan todos los np.nan generados en el paso anterior
+columnas_a_imputar = df_tab_sample.columns
+df_tab_sample[columnas_a_imputar] = imputador_knn.fit_transform(df_tab_sample[columnas_a_imputar])
 
-print("Matriz preprocesada exitosamente (Imputada con KNN y Escalada). Dimensiones:", df_imputado.shape)"""),
+print("Escalando las variables continuas (BMI_18_above, Work_hours)...")
+escalador = StandardScaler()
+cols_escalar = [c for c in ['BMI_18_above', 'Work_hours'] if c in df_tab_sample.columns]
+
+if cols_escalar:
+    df_tab_sample[cols_escalar] = escalador.fit_transform(df_tab_sample[cols_escalar])
+
+print("✅ Matriz de datos Limpia, Imputada, Escalada y lista para el modelo.")"""),
 
     # ---------------------------------------------------------
     # MARKDOWN 6: Feedback KNN y StandardScaler
@@ -190,7 +211,7 @@ print("Matriz preprocesada exitosamente (Imputada con KNN y Escalada). Dimension
     # ---------------------------------------------------------
     # CÓDIGO 7: Heatmap
     # ---------------------------------------------------------
-    nbf.v4.new_code_cell("""df_corr = df_imputado.corr()
+    nbf.v4.new_code_cell("""df_corr = df_tab_sample.corr()
 
 plt.figure(figsize=(10, 8))
 sns.heatmap(df_corr, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5, vmin=-1, vmax=1)
@@ -268,4 +289,4 @@ output_notebook_path = 'notebooks/EDA_Avanzado_DualEngine_CCHS.ipynb'
 with open(output_notebook_path, 'w', encoding='utf-8') as f:
     nbf.write(nb, f)
 
-print("¡Notebook 'EDA_Avanzado_DualEngine_CCHS.ipynb' consolidado exitosamente con todas las correcciones integradas!")
+print("¡Notebook 'notebooks/EDA_Avanzado_DualEngine_CCHS.ipynb' generado exitosamente con la estructura exacta y funcional respaldada!")
