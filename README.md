@@ -1,5 +1,9 @@
 # ✈️ Sistema Integral de Evaluación Médica Aeronáutica (Dual-Engine)
 
+> **📌 Nota para la Evaluación (Entrega 1 - Versión Final):**
+> Este repositorio ha sido reestructurado para garantizar la trazabilidad del proyecto. El archivo principal a evaluar es el notebook **`EDA_Avanzado_DualEngine_CCHS.ipynb`**, el cual contiene el análisis exploratorio definitivo utilizando el dataset de Factores Humanos (CCHS).
+> *Nota: Los notebooks y datasets de las iteraciones tempranas (basadas en diabetes) no han sido eliminados, sino que han sido movidos a las carpetas `notebooks_archivados/` y `datasets_archivados/` para mantener el historial de desarrollo limpio y accesible.*
+
 Este proyecto nace de la necesidad de aplicar la metodología científica de análisis de datos **CRISP-DM** para evaluar la aptitud médica de pilotos (con un foco analítico especial en patologías y factores humanos asociados al estrés crónico, fatiga aeromédica y salud mental). Para lograr una cobertura completa de los requerimientos clínicos y reglamentarios, el sistema opera bajo una innovadora arquitectura **Dual-Engine** que combina el rigor de las regulaciones de la DGAC/OACI (mediante técnicas de Procesamiento de Lenguaje Natural) con el modelamiento matemático predictivo sobre datos clínicos estructurados reales.
 
 ---
