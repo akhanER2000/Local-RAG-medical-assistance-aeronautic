@@ -28,7 +28,7 @@ import os
 
 # Carga de datos JSONL
 datos = []
-ruta_dataset = "mega_dataset_aeronautico.jsonl"
+ruta_dataset = "../dataset_sintetico/mega_dataset_aeronautico.jsonl"
 
 with open(ruta_dataset, 'r', encoding='utf-8') as f:
     for linea in f:
@@ -130,7 +130,7 @@ La reducción de dimensionalidad a través de PCA revela una separación semánt
     # ---------------------------------------------------------
     nbf.v4.new_code_cell("""import numpy as np
 
-ruta_csv = "health_dataset.csv"
+ruta_csv = "../datos_crudos/health_dataset.csv"
 df_tab = pd.read_csv(ruta_csv)
 
 cols_interes = ['Gen_health_state', 'Mental_health_state', 'Stress_level', 'Work_stress', 'BMI_18_above', 'Smoked', 'Weekly_alcohol', 'Work_hours']
@@ -263,8 +263,8 @@ Este pipeline sienta bases robustas y limpias para la fase de modelamiento avanz
 for celda in celdas:
     nb['cells'].append(celda)
 
-# Escribir el notebook final en la raíz
-output_notebook_path = 'EDA_Avanzado_DualEngine_CCHS.ipynb'
+# Escribir el notebook final en la carpeta notebooks
+output_notebook_path = 'notebooks/EDA_Avanzado_DualEngine_CCHS.ipynb'
 with open(output_notebook_path, 'w', encoding='utf-8') as f:
     nbf.write(nb, f)
 
