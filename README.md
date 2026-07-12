@@ -1,149 +1,154 @@
-# ✈️ Sistema Integral de Evaluación Médica Aeronáutica (Dual-Engine)
+# Sistema de Evaluación Médica Aeronáutica — Arquitectura Dual-Engine
 
-> **📌 Nota para la Evaluación (Entrega 1 - Versión Final):**
-> Este repositorio ha sido reestructurado para garantizar la trazabilidad del proyecto. El archivo principal a evaluar es el notebook **`EDA_Avanzado_DualEngine_CCHS.ipynb`**, el cual contiene el análisis exploratorio definitivo utilizando el dataset de Factores Humanos (CCHS).
-> *Nota: Los notebooks y datasets de las iteraciones tempranas (basadas en diabetes) no han sido eliminados, sino que han sido movidos a las carpetas `notebooks_archivados/` y `datasets_archivados/` para mantener el historial de desarrollo limpio y accesible.*
+Motor de apoyo a la decisión que evalúa señales clínicas contra normativa
+aeronáutica y médica, de forma **local, reproducible y trazable**, siguiendo la
+metodología **CRISP-DM**. Es el componente técnico abierto sobre el que se
+construye el producto privado *AeroFit*: el producto es privado; la ingeniería
+que lo sostiene, no.
 
-Este proyecto nace de la necesidad de aplicar la metodología científica de análisis de datos **CRISP-DM** para evaluar la aptitud médica de pilotos (con un foco analítico especial en patologías y factores humanos asociados al estrés crónico, fatiga aeromédica y salud mental). Para lograr una cobertura completa de los requerimientos clínicos y reglamentarios, el sistema opera bajo una innovadora arquitectura **Dual-Engine** que combina el rigor de las regulaciones de la DGAC/OACI (mediante técnicas de Procesamiento de Lenguaje Natural) con el modelamiento matemático predictivo sobre datos clínicos estructurados reales.
+Combina dos motores: un modelo predictivo de Machine Learning clásico sobre
+datos clínicos estructurados, y un motor RAG local (air-gapped) que responde
+citando la normativa de la DGAC/OACI. Un **«prompt puente»** conecta ambos.
 
----
+## Qué es
 
-## 📄 Informe de Avance y Formulación del Proyecto
+1. **Motor predictivo (supervisado).** Clasifica la aptitud (apto / no apto) a
+   partir de variables clínicas, con foco en fatiga, estrés y salud mental y la
+   clase «Riesgo» como objetivo prioritario.
+2. **Motor de segmentación (no supervisado).** K-Means (k=3) para explorar
+   perfiles de riesgo latentes no etiquetados en la data.
+3. **Motor RAG (local, air-gapped).** Mistral-7B servido por Ollama, con
+   embeddings vectoriales `nomic-embed-text`, sobre un corpus normativo
+   público. Responde citando la fuente; no infiere fuera de ella.
 
-Toda la justificación teórica, los objetivos del negocio, el entendimiento clínico y las definiciones de alcance que enmarcan este repositorio se encuentran formalizados académicamente en la documentación oficial. Por favor consulte el documento directamente en el siguiente enlace:
+## Arquitectura
 
-🔗 **[Documentación de Investigación y Respaldo Teórico del Proyecto](https://docs.google.com/document/d/1MERbrd4tcaVxPxwzoyYjgJ-4ecfWIIenZio1oF4cc24/edit?usp=sharing)**
+```
+   datos clínicos            ┌──────────────────────────┐
+   estructurados  ─────────▶ │  Motor predictivo (RF)   │
+   (CCHS, proxy)             │  scikit-learn + SMOTE    │
+                             └───────────┬──────────────┘
+                                         │ salida de riesgo
+                              「prompt puente」 la inyecta como contexto
+                                         ▼
+   normativa pública   ┌──────────────────────────────────────┐
+   DAN 19/61/67/121/135 │  Motor RAG local (air-gapped)        │ ─▶ respuesta
+   OACI Doc 8984  ────▶ │  Ollama · Mistral-7B                  │    con la
+                        │  embeddings vectoriales nomic-embed   │    norma
+                        └──────────────────────────────────────┘    citada
+```
 
----
+- **Embeddings:** `nomic-embed-text`, un modelo de embeddings **vectoriales**
+  ejecutado localmente vía Ollama.
+- **Corpus normativo:** ~14.501 pares de pregunta/respuesta generados de forma
+  **sintética** a partir de las resoluciones DGAC (DAN 19, 61, 67, 121, 135) y
+  el Manual Médico Aeronáutico OACI (Doc 8984).
+- **Air-gapped:** toda la inferencia corre en local; ningún dato sale del
+  entorno.
 
-## 🚀 Ingeniería de Modelamiento Avanzado (Dual-Engine V2)
+## Metodología (CRISP-DM)
 
-Tras consolidar el EDA, el sistema ha evolucionado hacia una arquitectura de Inteligencia Artificial Híbrida. A continuación se detallan los procesos de la fase de modelado bajo el estándar **CRISP-DM**:
+**Preparación de datos**
+- **Outliers:** filtrado por Rango Intercuartílico (IQR) en variables continuas
+  (IMC, horas de trabajo).
+- **Imputación:** `KNNImputer` para valores faltantes, aprovechando la
+  correlación entre indicadores de salud.
+- **Escalado:** `StandardScaler` (media 0, varianza 1).
+- **Desbalance:** el dataset presenta ~90 % de casos «Apto». Se aplicó **SMOTE**
+  sobre el conjunto de entrenamiento para mejorar la sensibilidad a la clase
+  «Riesgo».
+- **División:** train/test estratificado (`stratify=y`) para conservar las
+  proporciones de clase.
 
-### 1. Data Quality Report (DQR) y Limpieza Profunda (Punto 6)
-No se realizó una limpieza genérica; se aplicó un diagnóstico de calidad industrial:
-- **Gestión de Outliers:** Implementación del método de Rango Intercuartílico (IQR) para filtrar ruidos biométricos en variables continuas (IMC y Horas de trabajo), asegurando que el modelo aprenda de datos realistas.
-- **Imputación Multivariada:** Uso de `KNNImputer` para nulos, asumiendo que el perfil de salud de un piloto es interdependiente (si falta un dato de estrés, se deduce de sus indicadores de fatiga y salud mental similares).
-- **Balanceo de Clases con SMOTE:** El dataset original presentaba un desbalance crítico (90% de casos "Apto"). Se aplicó **SMOTE** (*Synthetic Minority Over-sampling Technique*) para generar minorías sintéticas de la clase "Riesgo", reduciendo drásticamente el sesgo hacia la clase mayoritaria y mejorando la sensibilidad del sistema.
+**Modelamiento supervisado.** Comparativa de tres algoritmos:
+- **Random Forest** — modelo elegido (relaciones no lineales, robustez).
+- **SVM (kernel RBF)** — frontera de decisión en alta dimensión.
+- **Regresión Logística** — línea base interpretable.
 
-### 2. Segmentación No Supervisada: Descubrimiento de Patrones (Punto 7)
-Para la medicina aeronáutica preventiva, implementamos **K-Means Clustering (k=3)**:
-- **Objetivo:** Identificar grupos de pilotos que, aunque no tienen un diagnóstico formal, presentan combinaciones peligrosas de fatiga silenciosa y estrés.
-- **Visualización:** Se utilizó **PCA** (*Principal Component Analysis*) para reducir la dimensionalidad y visualizar los clústeres en un plano 2D, permitiendo al CMA (Examinador Médico) ver la topología del riesgo de su dotación.
+**Segmentación no supervisada.** K-Means (k=3) para descubrir perfiles de
+riesgo. Se usó PCA solo para *visualizar* los clústeres en 2D (ver
+Limitaciones).
 
-### 3. Modelamiento Supervisado y Evaluación (Puntos 9 y 10)
-Se evaluó un ecosistema de tres algoritmos para garantizar la mejor elección técnica:
-- **Random Forest (Ganador):** Seleccionado por su capacidad para manejar relaciones no lineales y su robustez frente al sobreajuste.
-- **SVM (Kernel RBF):** Utilizado para encontrar fronteras de decisión óptimas en espacios de alta dimensionalidad.
-- **Regresión Logística:** Implementada como baseline comparativo de interpretabilidad.
+**Validación.** K-Fold estratificado (k=5): F1 promedio 0,75 con desviación
+±1,3 % entre folds (folds 0,72–0,76).
 
-> **Métricas Finales Alcanzadas:**
-> - **Recall (Clase Riesgo):** Priorizado para minimizar el Riesgo Tipo II (falsos negativos), donde un piloto no apto es clasificado como apto.
-> - **F1-Score:** Logró un equilibrio superior al **0.85** tras la aplicación de SMOTE.
+**Integración (prompt puente).** La salida del Random Forest se inyecta como
+contexto del RAG. Ejemplo: ante «Riesgo de fatiga», el sistema construye un
+prompt para Mistral-7B pidiendo recuperar de la DAN 67 los protocolos de
+suspensión de licencia médica.
 
-### 4. Validación de Generalización (Punto 11)
-Para garantizar que el sistema funcione con nuevos pilotos, se aplicó **K-Fold Cross-Validation (k=5)**. Este proceso validó que la precisión del modelo es estable (**±0.02**) y no depende de una división aleatoria afortunada de los datos, blindando el proyecto contra el *Overfitting*.
+## Resultados
 
-### 5. El "Prompt Puente": Integración Dual-Engine (Punto 12)
-La arquitectura se cierra con una innovación técnica: la salida probabilística del Random Forest se inyecta dinámicamente como contexto en el motor RAG.
+El modelo prioriza el **Recall** sobre la clase «Riesgo»: en un dominio médico,
+un falso negativo (declarar «apto» a quien no lo está) es el error costoso. Eso
+se logra a costa de la precisión — el modelo marca de más. Las cifras son de la
+evaluación sobre el conjunto de prueba (10.000 muestras) y de la validación
+cruzada; corresponden al pipeline estable **previo a la optimización de
+accuracy** (rama de trabajo).
 
-> **Ejemplo:** Si el modelo detecta "Riesgo de Fatiga", el sistema genera automáticamente un prompt para Mistral-7B solicitando: *"Basado en la detección de Riesgo Nivel 1, recupere de la DAN 67 los protocolos de suspensión de licencia médica"*.
-
-## 📋 Guía Completa de Cumplimiento (Rúbrica Sumativa 1)
-
-| Ítem Rúbrica | Estado | Ubicación de la Evidencia |
-| :--- | :---: | :--- |
-| **Punto 6:** DQR y Preprocesamiento | ✅ | Celdas 12-14 del Notebook (Análisis IQR y Balanceo). |
-| **Punto 7:** Selección de Modelos | ✅ | Markdown en Sección B (Justificación SVM vs RF). |
-| **Punto 8:** División Train/Test | ✅ | Celda de Split con `stratify=y` para consistencia médica. |
-| **Punto 9:** Entrenamiento | ✅ | Flujo automatizado en Sección B del Notebook. |
-| **Punto 10:** Evaluación y Métricas | ✅ | Matrices de Confusión y Classification Reports detallados. |
-| **Punto 11:** Optimización y CV | ✅ | Celda de Cross-Validation al final del modelamiento. |
-| **Punto 12:** Arquitectura Real | ✅ | Implementación funcional del "Prompt Puente" hacia Mistral. |
-
----
-
-## 🧬 Arquitectura Evolucionada: Sistema Dual-Engine V2
-
-El sistema ha trascendido de un análisis exploratorio a una plataforma de inteligencia artificial híbrida:
-- **Motor Predictivo (Supervisado):** Basado en un ensamble de Random Forest, entrenado para clasificar la aptitud de vuelo en un entorno dicotómico (APTO vs. NO APTO). Se implementó SMOTE (Synthetic Minority Over-sampling Technique) para corregir el desbalance crítico del dataset original, garantizando un Recall superior en la detección de pilotos con riesgo de fatiga.
-- **Motor de Segmentación (No Supervisado):** Implementación de K-Means Clustering para descubrir perfiles de riesgo latentes que no están etiquetados en la data oficial, permitiendo una medicina aeronáutica preventiva.
-- **Motor RAG (NLP):** Inferencia local (Air-Gapped) mediante Mistral-7B que actúa como el respaldo legal, vinculando las alertas biométricas del modelo predictivo con los artículos específicos de la DAN 67 y OACI.
-
-## 📊 Resultados de Modelamiento y Métricas
-
-| Módulo | Técnica | Métrica Clave | Resultado |
+| Módulo | Técnica | Métrica | Resultado |
 | :--- | :--- | :--- | :--- |
-| **Predictivo** | Random Forest + SMOTE | F1-Score (Clase Riesgo) | ~0.85+ |
-| **Generalización** | K-Fold Cross Validation | Stability Accuracy | ±0.02 |
-| **Segmentación** | K-Means (k=3) | PCA Variance Explained | 6.88% |
-| **Recuperación** | Local RAG | Top-3 Accuracy | >85% |
+| Predictivo | Random Forest + SMOTE | Recall (clase Riesgo) | 0,65 |
+| Predictivo | Random Forest + SMOTE | F1 (clase Riesgo) | 0,48 |
+| Predictivo | Random Forest + SMOTE | Precisión (clase Riesgo) | 0,38 |
+| Generalización | K-Fold (k=5) | F1 promedio | 0,75 (±1,3 %) |
+| Recuperación (RAG)¹ | evaluación simulada | Top-3 / MRR | 0,80 / 0,57 |
 
-## 📋 Guía Quick-Check para Evaluación (Rúbrica Sumativa 1)
+<sup>1</sup> La métrica del RAG proviene de una evaluación **ilustrativa sobre
+5 consultas** con recuperación simulada (`RAG_Evaluation.ipynb`), no de una
+evaluación del retriever en producción. Se reporta como referencia, no como
+resultado del sistema real.
 
-- [x] **Punto 6: Preprocesamiento y Calidad:** Ver DQR de outliers y limpieza KNN en Sección B del Notebook.
-- [x] **Punto 7, 9, 10: Modelamiento:** Comparativa SVM vs RF en Sección B.
-- [x] **Punto 8: División Train/Test:** Implementado con estratificación para conservar proporciones médicas.
-- [x] **Punto 11: Optimización:** Validación cruzada aplicada para mitigar el Overfitting.
-- [x] **Punto 12: Arquitectura:** Implementación funcional del "Prompt Puente" entre ML y RAG.
+## Requisitos e instalación
 
----
+- **Python** 3.10+
+- **Dependencias:** `pandas`, `scikit-learn`, `seaborn`, `umap-learn`,
+  `wordcloud`
+- **[Ollama](https://ollama.com)** corriendo localmente, con los modelos:
+  ```bash
+  ollama pull mistral
+  ollama pull nomic-embed-text
+  ```
+- **GPU** recomendada para acelerar la inferencia local.
 
-## 🏗️ Arquitectura del Sistema (Dual-Engine)
+```bash
+git clone https://github.com/akhanER2000/Local-RAG-medical-assistance-aeronautic.git
+cd Local-RAG-medical-assistance-aeronautic
+# con Ollama en ejecución, abrir el notebook maestro:
+# notebooks/EDA_Avanzado_DualEngine_CCHS.ipynb  →  Run All
+```
 
-El ecosistema computacional se nutre del esfuerzo cooperativo de dos motores integrados para garantizar diagnósticos y respuestas sin alucinaciones.
+## Limitaciones
 
-### 1. Módulo de Consulta Normativa (Motor RAG - NLP)
-Diseñado para la asimilación legal y búsqueda semántica de reglamentos:
-- **Procesamiento Masivo:** Fragmentación matemática de **14.501** pares de preguntas/respuestas generados sintéticamente a partir de las resoluciones DGAC (DAN 19, DAN 61, DAN 67, DAN 121, DAN 135) y el Manual Médico OACI 8984.
-- **Topología e Ingestión Vectorial:** Emplea los embeddings cuánticos (`nomic-embed-text`) proyectados en mapas 2D mediante técnicas de reducción dimensional clásicas y avanzadas (**PCA** y **UMAP**) para validar que las "islas de conocimiento" médico estén aisladas matemáticamente de las normas operacionales de vuelo.
+- **Dataset proxy.** El modelo predictivo se entrenó sobre el **CCHS (Canadian
+  Community Health Survey)**, una encuesta de salud de **población general
+  canadiense, pública** ([Kaggle](https://www.kaggle.com/datasets/aradhanahirapara/healthcare-survey/data)).
+  **No son datos de pilotos.** Se eligió como *proxy* ante la ausencia de datos
+  aeromédicos abiertos; las conclusiones no son extrapolables a población
+  aeronáutica sin re-entrenar con datos del dominio.
+- **PCA con baja varianza explicada.** En el PCA sobre los embeddings del
+  corpus, el primer componente explica ~**6,88 %** de la varianza y el segundo
+  ~4,25 % (los dos juntos ~11 %): la estructura no es linealmente compacta en 2D.
+  El PCA sirvió para *explorar y visualizar*, no como reducción de
+  dimensionalidad productiva ni como resultado del modelo.
+- **Modelo en optimización.** Las cifras corresponden al pipeline estable previo
+  a la optimización de accuracy. El F1 de la clase «Riesgo» (0,48) es bajo: el
+  modelo aún cambia sensibilidad por precisión. Es un trabajo en curso, no un
+  sistema cerrado.
+- **Corpus y etiquetas sintéticos.** Los pares pregunta/respuesta del RAG y las
+  etiquetas de riesgo se generaron sintéticamente a partir de la normativa y la
+  data; no sustituyen validación clínica.
+- **No es un dispositivo médico.** Es un motor de investigación/apoyo. No emite
+  diagnósticos ni reemplaza el juicio de un profesional.
 
-### 2. Módulo Predictivo de Riesgo Clínico (Motor Estructurado)
-Cimentado sobre las bases del Machine Learning clásico para prevenir fallos humanos:
-- **Corpus Analítico:** Exploración de la macro-base de datos médica del Canadian Community Health Survey (CCHS) enfocada en factores críticos para el vuelo (Dataset: [Healthcare Survey en Kaggle](https://www.kaggle.com/datasets/aradhanahirapara/healthcare-survey/data)).
-- **Robustez Algorítmica:** Inyección simulada de defectos de sensores hospitalarios en biomarcadores continuos, neutralizada a través de imputaciones multivariadas con **K-Nearest Neighbors (K-NN)** y una estabilización total de pesos escalares aplicando un **StandardScaler**.
+## Documentación
 
----
+La formulación del proyecto, los objetivos y el marco clínico están en el
+documento de respaldo:
+[Documentación de investigación](https://docs.google.com/document/d/1MERbrd4tcaVxPxwzoyYjgJ-4ecfWIIenZio1oF4cc24/edit?usp=sharing).
 
-## 🔬 Fases CRISP-DM Implementadas (Entregables Actuales)
+## Créditos
 
-Actualmente, el cuaderno analítico maestro cubre con éxito las etapas fundamentales de pre-entrenamiento de los datos:
-
-- **Data Understanding (Comprensión de los Datos):** Se extraen histogramas distribucionales precisos de textos y Nubes de Palabras filtradas. Adicionalmente, cuenta con el desarrollo pionero de una Matriz de Correlación de Pearson cuyos resultados estadísticos de los Factores de Riesgo son interpretados en tiempo real por Inteligencia Artificial generativa local.
-- **Data Quality Report (Reporte de Integridad):** Reporte automatizado en código que incluye la detección forense de valores nulos (NaN), simulación de rotura de flujos de datos en mediciones como el *Body Mass Index* (BMI) para medir la resiliencia algorítmica.
-- **Data Preparation (Preparación de Datos):** Transformación técnica orientada a modelos de Machine Learning (como Máquinas de Soporte Vectorial - SVM). Implica el llenado deductivo (imputación algorítmica multidimensional) y una escalabilidad (normalización) que ajusta la varianza a 1, eliminando ruidos métricos del *dataset tabular*.
-
----
-
-## ⚙️ Requisitos Técnicos y Reproducibilidad
-
-El sistema debe ejecutarse en el entorno para el cual fue nativamente conceptualizado.
-- **Lenguaje Base:** Python 3.10+
-- **Entorno de Operación:** Entornos Virtuales (`env`) sobre *Jupyter Notebook*.
-- **Dependencias Clave:** `pandas`, `scikit-learn`, `seaborn`, `umap-learn`, `wordcloud`.
-- **Hardware e IA Local Extricta:** Para dotar al sistema Dual-Engine y mantener privacidad PIV total sobre cuadros médicos, **el pipeline exige la instalación del servidor local `Ollama` ejecutándose en segundo plano**. Emplea concretamente los pesos de **`mistral`** (para inferencia lógica experta) y **`nomic-embed-text`** (para matematización vectorial), requiriendo de aceleración intensiva por GPU de la familia Turing/Ada/Lovelace/Blackwell.
-
----
-
-## 🚥 Instrucciones de Ejecución Rápida
-
-Sigue estos rigurosos pasos para auditar el funcionamiento matemático del proyecto:
-
-1. **Clona el ecosistema a tu estación de trabajo:**
-   ```bash
-   git clone https://github.com/akhanER2000/Local-RAG-medical-assistance-aeronautic.git
-   cd Local-RAG-medical-assistance-aeronautic
-   ```
-
-2. **Carga y arranca el Motor Ollama:**
-   Inicia la aplicación de Ollama en tu ordenador. Asegúrate de tener los modelos base sincronizados ejecutando en consola:
-   ```bash
-   ollama pull mistral
-   ollama pull nomic-embed-text
-   ```
-
-3. **Inicia tu IDE y el Cuaderno Predictivo:**
-   Abre el archivo maestro `notebooks/EDA_Avanzado_DualEngine_CCHS.ipynb` mediante VS Code u otro navegador para distribuciones Jupyter.
-
-4. **Desencadena el CRISP-DM Pipeline:**
-   Asegúrate de escoger el kernel de Python correspondiente a tu entorno pre-configurado y presiona **Run All**. Observarás en vivo la renderización dimensional de PCA, las matrices de calor clínicas y a *Mistral* emitiendo sus diagnósticos médicos concluyentes.
+- Dataset: CCHS, Statistics Canada (vía Kaggle), uso académico.
+- Normativa: documentos públicos DGAC / OACI.
+- Autor: AKHAN (`akhanER2000`). Proyecto universitario, autor único.
